@@ -1,8 +1,9 @@
-import 'package:appointment/pages/messages.dart';
-import 'package:appointment/pages/schedule.dart';
-import 'package:appointment/pages/settings.dart';
 import 'package:flutter/material.dart';
 import 'home_page.dart';
+import 'pages/messages.dart';
+import 'routes.dart';
+import 'pages/settings.dart';
+import 'pages/schedule.dart'; // Importamos la SchedulePage para la vista de Citas
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -35,16 +36,16 @@ class _MainScreenState extends State<MainScreen> {
   static const List<String> _pageTitles = <String>[
     'Inicio',
     'Mensajes',
-    'Citas',
-    'Configuración', // Título para la página de Ajustes/Perfil
+    'Citas Agendadas',
+    'Configuración',
   ];
 
   // Inicialización de la lista de Widgets
-  List<Widget> get _widgetOptions => <Widget>[
+  final List<Widget> _widgetOptions = <Widget>[
     const HomePage(),
     const MessagesPage(),
-    const SchedulePage(), // CAMBIO CLAVE: Ahora muestra la página de Citas
-    const SettingsPage(),
+    const SchedulePage(), // Pestaña de Citas Agendadas
+    const SettingsPage(), // Pestaña de Configuración/Perfil
   ];
 
   void _onItemTapped(int index) {
@@ -92,9 +93,9 @@ class _MainScreenState extends State<MainScreen> {
             label: _pageTitles[2],
           ),
           BottomNavigationBarItem(
-            icon: const Icon(Icons.person_outline), // Icono de Perfil
+            icon: const Icon(Icons.person_outline),
             activeIcon: const Icon(Icons.person),
-            label: _pageTitles[3], // Etiqueta 'Configuración'
+            label: _pageTitles[3],
           ),
         ],
         currentIndex: _selectedIndex,

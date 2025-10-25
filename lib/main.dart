@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'firebase_options.dart'; // Contiene DefaultFirebaseOptions
-import 'routes.dart'; // Importamos el generador de rutas
+import 'package:firebase_app_check/firebase_app_check.dart'; // <--- NUEVA IMPORTACIÓN
+import 'firebase_options.dart';
+import 'routes.dart';
 
 Future<void> main() async {
   // Asegura que los Widgets Binding estén inicializados
@@ -10,6 +11,16 @@ Future<void> main() async {
 
   // Inicialización de Firebase
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // --- INICIALIZACIÓN DE APP CHECK CORREGIDA ---
+  await FirebaseAppCheck.instance.activate(
+    // Usa DebugProvider en desarrollo para eliminar la advertencia
+    androidProvider: AndroidProvider.debug,
+    appleProvider: AppleProvider.debug,
+    // ELIMINADA: La propiedad webProvider.debug no existe.
+    // Usar la sintaxis correcta para Android/Apple es suficiente.
+  );
+  // ------------------------------------
 
   // Ejecuta la aplicación
   runApp(const MyApp());
@@ -21,17 +32,14 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Login de karlos',
-      debugShowCheckedModeBanner: false, // Quita el banner de DEBUG
-      // Determina la ruta inicial basándose en el estado de autenticación de Firebase
+      title: 'Doctor Appointment App',
+      debugShowCheckedModeBanner: false,
+
       initialRoute: FirebaseAuth.instance.currentUser != null
           ? Routes.home
           : Routes.login,
 
-      // Generador de rutas que maneja las transiciones entre pantallas
       onGenerateRoute: Routes.generateRoute,
-
-      // Nota: No se usa la propiedad 'home' ya que 'initialRoute' toma su lugar.
     );
   }
 }

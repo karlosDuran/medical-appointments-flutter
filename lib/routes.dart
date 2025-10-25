@@ -1,24 +1,27 @@
-import 'package:appointment/pages/messages.dart';
-import 'package:appointment/pages/schedule_appointment_page.dart';
-import 'package:appointment/pages/settings.dart';
 import 'package:flutter/material.dart';
-
+import 'home_page.dart';
 import 'login_page.dart';
 import 'main_screen.dart';
+import 'pages/settings.dart';
+import 'pages/messages.dart';
+import 'pages/schedule_appointment_page.dart';
+import 'pages/schedule.dart';
 
-// Placeholder para la página de Citas (Schedule) - ¡ELIMINADO!
-// Ahora usaremos el widget real ScheduleAppointmentPage
+// Placeholder para la clase SchedulePage si se usa directamente, aunque usaremos ScheduleView
 
 class Routes {
   static const String root = '/';
   static const String login = '/login';
   static const String home = '/home';
   static const String profile =
-      '/profile'; // Mantenemos la ruta para Profile (aunque ahora es Settings)
-  static const String messages = '/messages'; // Nueva ruta para Mensajes
-  static const String schedule = '/schedule'; // Nueva ruta para Citas
+      '/profile'; // Usada internamente para la pestaña de Settings
+  static const String messages = '/messages';
+  static const String schedule = '/schedule';
+  static const String scheduleAppointment = '/scheduleAppointment';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
+    final args = settings.arguments;
+
     switch (settings.name) {
       case root:
       case home:
@@ -27,16 +30,23 @@ class Routes {
       case login:
         return MaterialPageRoute(builder: (_) => const LoginPage());
       case profile:
-        // Pestaña de Configuración/Perfil
         return MaterialPageRoute(builder: (_) => const SettingsPage());
       case messages:
-        // Pestaña de Mensajes
         return MaterialPageRoute(builder: (_) => const MessagesPage());
       case schedule:
-        // CAMBIO CLAVE: Carga la página de agendar citas
+        return MaterialPageRoute(builder: (_) => const SchedulePage());
+
+      case scheduleAppointment:
+        if (args is String) {
+          return MaterialPageRoute(
+            builder: (_) => ScheduleAppointmentPage(appointmentType: args),
+          );
+        }
         return MaterialPageRoute(
-          builder: (_) => const ScheduleAppointmentPage(),
+          builder: (_) =>
+              const Center(child: Text('Error: Tipo de cita no especificado.')),
         );
+
       default:
         return MaterialPageRoute(
           builder: (_) => Scaffold(

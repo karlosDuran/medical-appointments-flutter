@@ -1,16 +1,9 @@
-import 'package:flutter/material.dart';
+import 'dart:io';
 import 'dart:math';
-import 'package:firebase_auth/firebase_auth.dart'; // Para obtener el nombre
-import 'routes.dart'; // Para la navegación
-
-// Lista de consejos para el pop-up aleatorio
-const List<String> dailyTips = [
-  "Recuerda beber al menos 8 vasos de agua hoy.",
-  "Dedica 15 minutos a estiramientos ligeros para tu postura.",
-  "Intenta desconectarte de las pantallas una hora antes de dormir.",
-  "Asegúrate de consumir una porción de verduras de hoja verde.",
-  "Programa una breve caminata de 10 minutos al aire libre.",
-];
+import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:path_provider/path_provider.dart';
+import 'routes.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -20,121 +13,138 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  // Definición de colores
-  final Color primaryColor = const Color(0xFF007BFF); // Azul principal
+  final Color primaryColor = const Color(0xFF007BFF);
   final Color secondaryColor = const Color(
-    0xFF6F3CFF,
-  ); // Morado/Violeta para contraste
-  final Color accentColor = const Color(0xFF4A90E2);
+    0xFF6B58F5,
+  ); // Tono morado para contraste
 
-  bool _hasShownTip = false;
+  User? _currentUser;
+  File? _localProfileImageFile;
+
+  final List<String> _dailyTips = [
+    "Recuerda beber al menos 8 vasos de agua al día para mantenerte hidratado.",
+    "Prioriza 7-9 horas de sueño cada noche para mejorar tu concentración.",
+    "Toma un descanso de 5 minutos cada hora si trabajas frente a una pantalla.",
+    "Incluye verduras de hoja verde en tu dieta diaria para un aporte extra de vitaminas.",
+    "Da un paseo de 30 minutos; la actividad física ligera es clave para la salud mental.",
+  ];
 
   @override
   void initState() {
     super.initState();
-    // Muestra el consejo después de que el widget se ha construido
-    WidgetsBinding.instance.addPostFrameCallback((_) => _showDailyTip(context));
+    _currentUser = FirebaseAuth.instance.currentUser;
+    _showDailyTipPopup();
+    _loadLocalImage();
   }
 
-  // Función para mostrar el diálogo de consejos
-  void _showDailyTip(BuildContext context) {
-    if (_hasShownTip) return;
+  // Muestra un pop-up con un consejo aleatorio al inicio
+  void _showDailyTipPopup() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final random = Random();
+      final tip = _dailyTips[random.nextInt(_dailyTips.length)];
 
-    final randomTip = dailyTips[Random().nextInt(dailyTips.length)];
-
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
           title: Row(
             children: [
-              Icon(Icons.lightbulb_outline, color: primaryColor),
-              const SizedBox(width: 10),
+              Icon(Icons.lightbulb_outline, color: secondaryColor),
+              const SizedBox(width: 8),
               const Text("Consejo del Día"),
             ],
           ),
-          content: Text(randomTip),
+          content: Text(tip, style: const TextStyle(fontSize: 16)),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: Text("¡Entendido!", style: TextStyle(color: primaryColor)),
+              child: Text("Cerrar", style: TextStyle(color: primaryColor)),
             ),
           ],
-        );
-      },
-    );
-
-    // Marca como mostrado para que no aparezca de nuevo en esta sesión
-    _hasShownTip = true;
+        ),
+      );
+    });
   }
 
-  // Widget para las tarjetas de cita (similares a Clinic Visit)
+  // Lógica para cargar la imagen local guardada (requiere path_provider)
+  Future<void> _loadLocalImage() async {
+    final directory = await getApplicationDocumentsDirectory();
+    final path = File('${directory.path}/images/profile_picture.jpg');
+
+    if (await path.exists()) {
+      setState(() {
+        _localProfileImageFile = path;
+      });
+    } else {
+      setState(() {
+        _localProfileImageFile = null;
+      });
+    }
+  }
+
   Widget _buildAppointmentCard({
     required String title,
     required String subtitle,
     required IconData icon,
     required Color color,
-    required VoidCallback onTap,
+    required String routeArg,
   }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        // CORRECCIÓN CLAVE: Eliminamos height: 150 y width: 150
-        // Ahora el tamaño es determinado por el padding interno y el Flexible/Expanded
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.9),
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: color.withOpacity(0.2),
-              blurRadius: 10,
-              offset: const Offset(0, 5),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          // Añadimos MainAxisAlignment.end para empujar el contenido hacia abajo
-          mainAxisAlignment: MainAxisAlignment.end,
-          // Ajustamos el tamaño del contenido para evitar el desbordamiento
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(12),
+    return Flexible(
+      child: GestureDetector(
+        onTap: () {
+          // Navegación al formulario de citas con el tipo de cita como argumento
+          Navigator.pushNamed(
+            context,
+            Routes.scheduleAppointment,
+            arguments: routeArg,
+          );
+        },
+        child: Container(
+          padding: const EdgeInsets.all(16.0),
+          margin: const EdgeInsets.symmetric(horizontal: 8.0),
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: color.withOpacity(0.4),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
               ),
-              child: Icon(icon, color: Colors.white, size: 30),
-            ),
-            const SizedBox(
-              height: 15,
-            ), // Añadimos espacio en lugar de usar MainAxisAlignment.spaceBetween
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.8),
-                    fontSize: 12,
-                  ),
+                child: Icon(icon, color: Colors.white, size: 30),
+              ),
+              const SizedBox(height: 15),
+              Text(
+                title,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
                 ),
-              ],
-            ),
-          ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.8),
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -142,152 +152,140 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    // Intenta obtener el nombre del usuario, si no está disponible usa un valor por defecto
-    final userName =
-        FirebaseAuth.instance.currentUser?.displayName ?? "Usuario";
+    final userName = _currentUser?.displayName ?? "karlos";
 
-    // Obtenemos solo el primer nombre
-    final firstName = userName.split(' ')[0];
-
+    // La HomePage ahora solo devuelve el contenido central sin Scaffold ni AppBar
     return SingleChildScrollView(
-      padding: const EdgeInsets.only(
-        top: 20.0,
-        left: 20.0,
-        right: 20.0,
-        bottom: 20.0,
-      ),
+      padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           // Saludo
           Text(
-            "Hola $firstName",
+            'Hola $userName',
             style: const TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF333333),
+              color: Colors.black87,
             ),
           ),
-          const SizedBox(height: 5),
           Text(
-            "¿Cómo te sientes hoy?",
-            style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+            '¿Cómo te sientes hoy?',
+            style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
           ),
-          const SizedBox(height: 30),
+          const SizedBox(height: 25),
 
-          // Cards de Citas
+          // Tarjetas de Agendamiento
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              // CORRECCIÓN CLAVE: Usamos Flexible y SizedBox para controlar el espaciado
-              Flexible(
-                child: _buildAppointmentCard(
-                  title: "Visita a Clínica",
-                  subtitle: "Agenda una cita ahora",
-                  icon: Icons.add,
-                  color: secondaryColor,
-                  onTap: () {
-                    // Navegar a la página de agendar citas
-                    Navigator.pushNamed(context, Routes.schedule);
-                  },
-                ),
+              _buildAppointmentCard(
+                title: "Visita a Clínica",
+                subtitle: "Agenda una cita con tu doctor ahora",
+                icon: Icons.add,
+                color: secondaryColor, // Morado
+                routeArg: 'Visita a Clínica',
               ),
-              const SizedBox(width: 15), // Espacio entre las tarjetas
-              Flexible(
-                child: _buildAppointmentCard(
-                  title: "Consulta Remota",
-                  subtitle: "Llamada o video chat",
-                  icon: Icons.home_outlined,
-                  color: accentColor,
-                  onTap: () {
-                    // Lógica para consulta remota
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("Consulta Remota - En desarrollo"),
-                      ),
-                    );
-                  },
-                ),
+              _buildAppointmentCard(
+                title: "Consulta Remota",
+                subtitle: "Llamada o video chat",
+                icon: Icons.home,
+                color: primaryColor, // Azul
+                routeArg: 'Consulta Remota',
               ),
             ],
           ),
-          const SizedBox(height: 40),
+          const SizedBox(height: 25),
 
-          // Título de Doctores Populares (Simulación de la imagen)
+          // Sección de Síntomas
           const Text(
-            "Doctores Populares",
+            '¿Cuáles son tus síntomas?',
             style: TextStyle(
-              fontSize: 22,
+              fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF333333),
+              color: Colors.black87,
             ),
           ),
-          const SizedBox(height: 15),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8.0,
+            children: [
+              _buildSymptomChip('Temperatura', primaryColor),
+              _buildSymptomChip('Tos', primaryColor),
+              _buildSymptomChip('Fiebre', primaryColor),
+              _buildSymptomChip('Dolor de cabeza', primaryColor),
+            ],
+          ),
+          const SizedBox(height: 25),
 
-          // Lista de Doctores Populares (Simulación)
-          ...List.generate(4, (index) => _buildDoctorTile(context, index)),
+          // Sección de Doctores Populares
+          const Text(
+            'Doctores Populares',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 10),
+          // Lista horizontal de doctores (simulada)
+          SizedBox(
+            height: 200,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: [
+                _buildDoctorCard('Dr. Pérez', 'Cardiología', secondaryColor),
+                _buildDoctorCard('Dra. Gámez', 'Pediatría', secondaryColor),
+                _buildDoctorCard('Dr. Lopez', 'General', secondaryColor),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 
-  // Widget de simulación para la lista de doctores
-  Widget _buildDoctorTile(BuildContext context, int index) {
+  Widget _buildSymptomChip(String label, Color color) {
+    return Chip(
+      label: Text(label, style: TextStyle(color: color)),
+      backgroundColor: color.withOpacity(0.1),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+    );
+  }
+
+  Widget _buildDoctorCard(String name, String specialty, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
-      margin: const EdgeInsets.only(bottom: 15),
+      width: 150,
+      margin: const EdgeInsets.only(right: 15),
+      padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
+          BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 5),
         ],
       ),
-      child: Row(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Ícono de Doctor
           CircleAvatar(
-            radius: 30,
-            backgroundColor: primaryColor.withOpacity(0.1),
-            child: Icon(Icons.medical_services_outlined, color: primaryColor),
+            radius: 35,
+            backgroundColor: color.withOpacity(0.2),
+            child: Icon(Icons.person, size: 40, color: color),
           ),
-          const SizedBox(width: 15),
-
-          // Información del Doctor
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "Dr. Juan Pérez ${index + 1}",
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-                Text(
-                  "Cardiólogo - 4.9 ⭐",
-                  style: TextStyle(color: Colors.grey[600], fontSize: 14),
-                ),
-              ],
-            ),
+          const SizedBox(height: 10),
+          Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
+          Text(
+            specialty,
+            style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
           ),
-
-          // Botón de cita rápida
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
-              color: accentColor,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: const Text(
-              "Cita",
-              style: TextStyle(color: Colors.white, fontSize: 14),
-            ),
+          const SizedBox(height: 5),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.star, size: 14, color: Colors.amber),
+              Text(' 4.9', style: TextStyle(fontSize: 13)),
+            ],
           ),
         ],
       ),

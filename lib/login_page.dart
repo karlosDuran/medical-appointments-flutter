@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
-import 'routes.dart'; // Para las rutas nombradas
+import 'routes.dart';
+import 'services/firestore_service.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -15,13 +15,12 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirestoreService _firestoreService = FirestoreService();
 
-  // Definición de colores para el tema médico
   final Color primaryColor = const Color(0xFF007BFF); // Azul principal
   final Color accentColor = const Color(0xFF4A90E2); // Azul más claro
   final Color backgroundColor = Colors.white;
 
-  // Función auxiliar para mostrar mensajes (Snackbars)
   void _showMessage(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(
@@ -29,30 +28,51 @@ class _LoginPageState extends State<LoginPage> {
     ).showSnackBar(SnackBar(content: Text(message)));
   }
 
-  // Lógica para crear una nueva cuenta (Botón: "Crear una cuenta nueva")
-  Future<void> _createAccount() async {
+  Future<void> _handleSignUp() async {
     if (_formKey.currentState!.validate()) {
       try {
-        await _auth.createUserWithEmailAndPassword(
-          email: emailController.text.trim(),
-          password: passwordController.text.trim(),
+        UserCredential userCredential = await _auth
+            .createUserWithEmailAndPassword(
+              email: emailController.text.trim(),
+              password: passwordController.text.trim(),
+            );
+
+        if (userCredential.user != null) {
+          await _firestoreService.createUserProfile(
+            userCredential.user!.uid,
+            userCredential.user!.email!,
+          );
+        }
+
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Cuenta creada con éxito. ¡Ya puedes ingresar!"),
+          ),
         );
-        _showMessage("Cuenta creada con éxito. ¡Ya puedes ingresar!");
+        Navigator.pushReplacementNamed(context, Routes.home);
       } on FirebaseAuthException catch (e) {
         String message;
         if (e.code == 'weak-password') {
           message = "La contraseña es muy débil.";
         } else if (e.code == 'email-already-in-use') {
-          message = "El correo ya está en uso por otra cuenta.";
+          message = "El correo ya está en uso para otra cuenta.";
         } else {
-          message = "Error al crear cuenta: ${e.message}";
+          message = e.message ?? "Ocurrió un error al registrar.";
         }
-        _showMessage(message);
+        if (!mounted) return;
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(message)));
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Error: ${e.toString()}")));
       }
     }
   }
 
-  // Lógica para enviar el correo de restablecimiento (Botón: "Olvidó su contraseña")
   Future<void> _forgotPassword() async {
     if (emailController.text.trim().isEmpty) {
       _showMessage(
@@ -77,41 +97,48 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  // Lógica para iniciar sesión (Botón: "Ingresar")
-  Future<void> _signIn() async {
+  Future<void> _handleSignIn() async {
     if (_formKey.currentState!.validate()) {
       try {
-        await _auth.signInWithEmailAndPassword(
+        UserCredential userCredential = await _auth.signInWithEmailAndPassword(
           email: emailController.text.trim(),
           password: passwordController.text.trim(),
         );
 
-        // NAVEGACIÓN EXITOSA: Utiliza la ruta nombrada HOME
-        if (mounted) {
-          Navigator.pushReplacementNamed(context, Routes.home);
-        }
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Bienvenido ${userCredential.user!.email}")),
+        );
+
+        Navigator.pushReplacementNamed(context, Routes.home);
       } on FirebaseAuthException catch (e) {
-        String message = "";
+        String message = "Error desconocido.";
         if (e.code == 'user-not-found') {
-          message = "No se encontró un usuario con ese correo.";
+          message = "Usuario no encontrado.";
         } else if (e.code == 'wrong-password') {
           message = "Contraseña incorrecta.";
         } else {
-          message = "Error: ${e.message}";
+          message = e.message ?? "Error de inicio de sesión.";
         }
-        _showMessage(message);
+        if (!mounted) return;
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(message)));
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Error: ${e.toString()}")));
       }
     }
   }
 
-  // Widget para el encabezado con la forma de onda
   Widget _buildWaveHeader(BuildContext context) {
     return Container(
       width: double.infinity,
-      height: 250, // Altura del encabezado
+      height: 250,
       decoration: BoxDecoration(
         color: primaryColor,
-        // Usamos un clipPath para simular la forma de onda
         borderRadius: const BorderRadius.vertical(bottom: Radius.circular(50)),
         boxShadow: [
           BoxShadow(
@@ -126,19 +153,25 @@ class _LoginPageState extends State<LoginPage> {
           end: Alignment.bottomCenter,
         ),
       ),
-      child: const Center(
+      child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Icono de ejemplo para la app médica
-            Icon(Icons.health_and_safety, size: 70, color: Colors.white),
-            SizedBox(height: 10),
-            Text(
-              "Bienvenido de nuevo",
+            const Icon(Icons.health_and_safety, size: 70, color: Colors.white),
+            const SizedBox(height: 10),
+            const Text(
+              "Aplicación Médica",
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
+              ),
+            ),
+            Text(
+              "Inicia Sesión para continuar",
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.8),
+                fontSize: 14,
               ),
             ),
           ],
@@ -151,14 +184,11 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: backgroundColor,
-      // No usamos AppBar, ya que el encabezado es personalizado
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Encabezado de la Onda
             _buildWaveHeader(context),
-
             Padding(
               padding: const EdgeInsets.all(30.0),
               child: Form(
@@ -166,14 +196,11 @@ class _LoginPageState extends State<LoginPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const SizedBox(
-                      height: 10,
-                    ), // Espacio después del encabezado
-                    // Título del formulario
+                    const SizedBox(height: 10),
                     const Text(
-                      "Iniciar Sesión",
+                      "Acceso Seguro",
                       style: TextStyle(
-                        fontSize: 22,
+                        fontSize: 24,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFF333333),
                       ),
@@ -193,6 +220,10 @@ class _LoginPageState extends State<LoginPage> {
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
                           borderSide: BorderSide(color: primaryColor, width: 2),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 16,
+                          horizontal: 16,
                         ),
                       ),
                       validator: (value) {
@@ -218,6 +249,10 @@ class _LoginPageState extends State<LoginPage> {
                           borderRadius: BorderRadius.circular(10),
                           borderSide: BorderSide(color: primaryColor, width: 2),
                         ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 16,
+                          horizontal: 16,
+                        ),
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
@@ -226,11 +261,24 @@ class _LoginPageState extends State<LoginPage> {
                         return null;
                       },
                     ),
-                    const SizedBox(height: 30),
+
+                    // Botón Olvidó Contraseña alineado a la derecha
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: _forgotPassword,
+                        child: Text(
+                          "¿Olvidó su contraseña?",
+                          style: TextStyle(color: accentColor),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 10),
 
                     // 5. Botón para Iniciar Sesión (Relleno)
                     ElevatedButton(
-                      onPressed: _signIn,
+                      onPressed: _handleSignIn,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: primaryColor,
                         padding: const EdgeInsets.symmetric(vertical: 18),
@@ -245,30 +293,33 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
 
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 25),
 
-                    // 3. Botón de "Olvidó su contraseña" (Texto simple)
-                    TextButton(
-                      onPressed: _forgotPassword,
-                      child: Text(
-                        "¿Olvidó su contraseña?",
-                        style: TextStyle(color: accentColor),
+                    const Divider(color: Colors.grey),
+
+                    const SizedBox(height: 25),
+
+                    // 4. Botón de "Crear una cuenta nueva" (Contorno)
+                    OutlinedButton(
+                      onPressed: _handleSignUp,
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        side: BorderSide(color: accentColor, width: 1.5),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                       ),
-                    ),
-
-                    // 4. Botón de "Crear una cuenta nueva" (Texto simple)
-                    TextButton(
-                      onPressed: _createAccount,
                       child: Text(
                         "Crear una cuenta nueva",
                         style: TextStyle(
                           color: accentColor,
                           fontWeight: FontWeight.bold,
+                          fontSize: 16,
                         ),
                       ),
                     ),
 
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 20),
                   ],
                 ),
               ),
