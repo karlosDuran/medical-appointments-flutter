@@ -246,7 +246,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   icon: Icon(Icons.edit, size: 20, color: primaryColor),
                   onPressed: () => _showEditDialog(
                     context,
-                    "Editar ${title}",
+                    "Editar $title",
                     isMissing ? "" : value,
                     onEdit,
                     keyboardType: keyboardType,

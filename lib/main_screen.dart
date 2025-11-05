@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'home_page.dart';
 import 'pages/messages.dart';
-import 'routes.dart';
+
 import 'pages/settings.dart';
 import 'pages/schedule.dart'; // Importamos la SchedulePage para la vista de Citas
 
@@ -16,21 +16,6 @@ class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
 
   // Widget genérico de Placeholder para las pantallas no implementadas
-  Widget _buildPlaceholder(String title) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.construction, size: 50, color: Colors.grey),
-          const SizedBox(height: 10),
-          Text(
-            'Página de $title en construcción',
-            style: const TextStyle(fontSize: 18, color: Colors.grey),
-          ),
-        ],
-      ),
-    );
-  }
 
   // Lista de los títulos del AppBar
   static const List<String> _pageTitles = <String>[

@@ -177,7 +177,7 @@ class _ScheduleAppointmentPageState extends State<ScheduleAppointmentPage> {
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
-                value: _selectedSpecialist,
+                initialValue: _selectedSpecialist,
                 hint: const Text('Selecciona un doctor'),
                 items: _specialists.map((String value) {
                   return DropdownMenuItem<String>(

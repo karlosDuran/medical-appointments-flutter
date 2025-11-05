@@ -19,7 +19,6 @@ class _HomePageState extends State<HomePage> {
   ); // Tono morado para contraste
 
   User? _currentUser;
-  File? _localProfileImageFile;
 
   final List<String> _dailyTips = [
     "Recuerda beber al menos 8 vasos de agua al día para mantenerte hidratado.",
@@ -75,11 +74,9 @@ class _HomePageState extends State<HomePage> {
 
     if (await path.exists()) {
       setState(() {
-        _localProfileImageFile = path;
       });
     } else {
       setState(() {
-        _localProfileImageFile = null;
       });
     }
   }
