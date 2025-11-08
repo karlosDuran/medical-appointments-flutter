@@ -73,4 +73,19 @@ class FirestoreService {
       'status': 'cancelada',
     });
   }
+
+  // UPDATE: Actualizar una cita existente
+  Future<void> updateAppointment(
+    String appointmentId,
+    Map<String, dynamic> data,
+  ) async {
+    try {
+      await _db
+          .collection(_appointmentsCollection)
+          .doc(appointmentId)
+          .update(data);
+    } catch (e) {
+      throw Exception('Error al actualizar la cita: $e');
+    }
+  }
 }

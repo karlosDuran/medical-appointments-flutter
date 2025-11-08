@@ -5,6 +5,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:path_provider/path_provider.dart';
 import 'routes.dart';
 
+// Variable estática para controlar si ya se mostró el tip en esta sesión de la app
+class _AppState {
+  static bool _tipShownThisSession = false;
+}
+
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -32,11 +37,16 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _currentUser = FirebaseAuth.instance.currentUser;
-    _showDailyTipPopup();
+
+    // Solo mostrar el tip una vez por sesión de la app
+    if (!_AppState._tipShownThisSession) {
+      _AppState._tipShownThisSession = true;
+      _showDailyTipPopup();
+    }
     _loadLocalImage();
   }
 
-  // Muestra un pop-up con un consejo aleatorio al inicio
+  // Muestra el pop-up con un consejo aleatorio
   void _showDailyTipPopup() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final random = Random();
@@ -73,11 +83,9 @@ class _HomePageState extends State<HomePage> {
     final path = File('${directory.path}/images/profile_picture.jpg');
 
     if (await path.exists()) {
-      setState(() {
-      });
+      setState(() {});
     } else {
-      setState(() {
-      });
+      setState(() {});
     }
   }
 

@@ -1,3 +1,4 @@
+import 'package:appointment/create_secion.dart';
 import 'package:flutter/material.dart';
 import 'login_page.dart';
 import 'main_screen.dart';
@@ -5,18 +6,21 @@ import 'pages/settings.dart';
 import 'pages/messages.dart';
 import 'pages/schedule_appointment_page.dart';
 import 'pages/schedule.dart';
+import 'pages/edit_appointment_page.dart';
 
 // Placeholder para la clase SchedulePage si se usa directamente, aunque usaremos ScheduleView
 
 class Routes {
   static const String root = '/';
   static const String login = '/login';
+  static const String createSession = '/createSession';
   static const String home = '/home';
   static const String profile =
       '/profile'; // Usada internamente para la pestaña de Settings
   static const String messages = '/messages';
   static const String schedule = '/schedule';
   static const String scheduleAppointment = '/scheduleAppointment';
+  static const String editAppointment = '/editAppointment';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     final args = settings.arguments;
@@ -28,6 +32,8 @@ class Routes {
         return MaterialPageRoute(builder: (_) => const MainScreen());
       case login:
         return MaterialPageRoute(builder: (_) => const LoginPage());
+      case createSession:
+        return MaterialPageRoute(builder: (_) => const CreateSessionPage());
       case profile:
         return MaterialPageRoute(builder: (_) => const SettingsPage());
       case messages:
@@ -44,6 +50,17 @@ class Routes {
         return MaterialPageRoute(
           builder: (_) =>
               const Center(child: Text('Error: Tipo de cita no especificado.')),
+        );
+
+      case editAppointment:
+        if (args is String) {
+          return MaterialPageRoute(
+            builder: (_) => EditAppointmentPage(docId: args),
+          );
+        }
+        return MaterialPageRoute(
+          builder: (_) =>
+              const Center(child: Text('Error: ID de cita no especificado.')),
         );
 
       default:

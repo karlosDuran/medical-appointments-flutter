@@ -1,25 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'routes.dart';
-import 'services/firestore_service.dart';
+import '../routes.dart';
+import '../services/firestore_service.dart';
 
-class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+class CreateSessionPage extends StatefulWidget {
+  const CreateSessionPage({super.key});
 
   @override
-  State<LoginPage> createState() => _LoginPageState();
+  State<CreateSessionPage> createState() => _CreateSessionPageState();
 }
 
-class _LoginPageState extends State<LoginPage> {
+class _CreateSessionPageState extends State<CreateSessionPage> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
+  final TextEditingController confirmPasswordController =
+      TextEditingController();
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirestoreService _firestoreService = FirestoreService();
 
-  final Color primaryColor = const Color(0xFF007BFF); // Azul principal
-  final Color accentColor = const Color(0xFF4A90E2); // Azul más claro
+  final Color primaryColor = const Color(0xFF007BFF);
+  final Color accentColor = const Color(0xFF4A90E2);
   final Color backgroundColor = Colors.white;
+
+  bool _isPasswordVisible = false;
+  bool _isConfirmPasswordVisible = false;
 
   void _showMessage(String message) {
     if (!mounted) return;
@@ -54,81 +59,17 @@ class _LoginPageState extends State<LoginPage> {
       } on FirebaseAuthException catch (e) {
         String message;
         if (e.code == 'weak-password') {
-          message = "La contraseña es muy débil.";
+          message = "La contraseña es muy débil. Usa al menos 6 caracteres.";
         } else if (e.code == 'email-already-in-use') {
           message = "El correo ya está en uso para otra cuenta.";
+        } else if (e.code == 'invalid-email') {
+          message = "El formato del correo no es válido.";
         } else {
           message = e.message ?? "Ocurrió un error al registrar.";
         }
-        if (!mounted) return;
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(message)));
+        _showMessage(message);
       } catch (e) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Error: ${e.toString()}")));
-      }
-    }
-  }
-
-  Future<void> _forgotPassword() async {
-    if (emailController.text.trim().isEmpty) {
-      _showMessage(
-        "Por favor, ingresa tu correo para restablecer la contraseña.",
-      );
-      return;
-    }
-
-    try {
-      await _auth.sendPasswordResetEmail(email: emailController.text.trim());
-      _showMessage(
-        "Se ha enviado un correo a ${emailController.text.trim()} para restablecer tu contraseña.",
-      );
-    } on FirebaseAuthException catch (e) {
-      String message;
-      if (e.code == 'user-not-found') {
-        message = "No se encontró un usuario con ese correo.";
-      } else {
-        message = "Error al enviar correo: ${e.message}";
-      }
-      _showMessage(message);
-    }
-  }
-
-  Future<void> _handleSignIn() async {
-    if (_formKey.currentState!.validate()) {
-      try {
-        UserCredential userCredential = await _auth.signInWithEmailAndPassword(
-          email: emailController.text.trim(),
-          password: passwordController.text.trim(),
-        );
-
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Bienvenido ${userCredential.user!.email}")),
-        );
-
-        Navigator.pushReplacementNamed(context, Routes.home);
-      } on FirebaseAuthException catch (e) {
-        String message = "Error desconocido.";
-        if (e.code == 'user-not-found') {
-          message = "Usuario no encontrado.";
-        } else if (e.code == 'wrong-password') {
-          message = "Contraseña incorrecta.";
-        } else {
-          message = e.message ?? "Error de inicio de sesión.";
-        }
-        if (!mounted) return;
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(message)));
-      } catch (e) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Error: ${e.toString()}")));
+        _showMessage("Error: ${e.toString()}");
       }
     }
   }
@@ -157,10 +98,10 @@ class _LoginPageState extends State<LoginPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.health_and_safety, size: 70, color: Colors.white),
+            const Icon(Icons.person_add, size: 70, color: Colors.white),
             const SizedBox(height: 10),
             const Text(
-              "Aplicación Médica",
+              "Crear Cuenta",
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 24,
@@ -168,7 +109,7 @@ class _LoginPageState extends State<LoginPage> {
               ),
             ),
             Text(
-              "Inicia Sesión para continuar",
+              "Únete a nuestra comunidad",
               style: TextStyle(
                 color: Colors.white.withOpacity(0.8),
                 fontSize: 14,
@@ -178,6 +119,14 @@ class _LoginPageState extends State<LoginPage> {
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    emailController.dispose();
+    passwordController.dispose();
+    confirmPasswordController.dispose();
+    super.dispose();
   }
 
   @override
@@ -198,7 +147,7 @@ class _LoginPageState extends State<LoginPage> {
                   children: [
                     const SizedBox(height: 10),
                     const Text(
-                      "Acceso Seguro",
+                      "Registro de Usuario",
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
@@ -207,13 +156,13 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     const SizedBox(height: 20),
 
-                    // 1. Campo para Correo Electrónico
+                    // Campo para Correo Electrónico
                     TextFormField(
                       controller: emailController,
                       keyboardType: TextInputType.emailAddress,
                       decoration: InputDecoration(
-                        labelText: "Correo electrónico / Usuario",
-                        prefixIcon: Icon(Icons.person, color: primaryColor),
+                        labelText: "Correo electrónico",
+                        prefixIcon: Icon(Icons.email, color: primaryColor),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
@@ -230,18 +179,36 @@ class _LoginPageState extends State<LoginPage> {
                         if (value == null || value.isEmpty) {
                           return "Por favor ingresa tu correo";
                         }
+                        if (!RegExp(
+                          r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                        ).hasMatch(value)) {
+                          return "Ingresa un correo válido";
+                        }
                         return null;
                       },
                     ),
                     const SizedBox(height: 16),
 
-                    // 2. Campo para Contraseña
+                    // Campo para Contraseña
                     TextFormField(
                       controller: passwordController,
-                      obscureText: true,
+                      obscureText: !_isPasswordVisible,
                       decoration: InputDecoration(
                         labelText: "Contraseña",
                         prefixIcon: Icon(Icons.lock, color: primaryColor),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _isPasswordVisible
+                                ? Icons.visibility
+                                : Icons.visibility_off,
+                            color: primaryColor,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _isPasswordVisible = !_isPasswordVisible;
+                            });
+                          },
+                        ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
@@ -258,27 +225,66 @@ class _LoginPageState extends State<LoginPage> {
                         if (value == null || value.isEmpty) {
                           return "Por favor ingresa tu contraseña";
                         }
+                        if (value.length < 6) {
+                          return "La contraseña debe tener al menos 6 caracteres";
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Campo para Confirmar Contraseña
+                    TextFormField(
+                      controller: confirmPasswordController,
+                      obscureText: !_isConfirmPasswordVisible,
+                      decoration: InputDecoration(
+                        labelText: "Confirmar contraseña",
+                        prefixIcon: Icon(
+                          Icons.lock_outline,
+                          color: primaryColor,
+                        ),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _isConfirmPasswordVisible
+                                ? Icons.visibility
+                                : Icons.visibility_off,
+                            color: primaryColor,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _isConfirmPasswordVisible =
+                                  !_isConfirmPasswordVisible;
+                            });
+                          },
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(color: primaryColor, width: 2),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 16,
+                          horizontal: 16,
+                        ),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return "Por favor confirma tu contraseña";
+                        }
+                        if (value != passwordController.text) {
+                          return "Las contraseñas no coinciden";
+                        }
                         return null;
                       },
                     ),
 
-                    // Botón Olvidó Contraseña alineado a la derecha
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(
-                        onPressed: _forgotPassword,
-                        child: Text(
-                          "¿Olvidó su contraseña?",
-                          style: TextStyle(color: accentColor),
-                        ),
-                      ),
-                    ),
+                    const SizedBox(height: 25),
 
-                    const SizedBox(height: 10),
-
-                    // 5. Botón para Iniciar Sesión (Relleno)
+                    // Botón para Crear Cuenta
                     ElevatedButton(
-                      onPressed: _handleSignIn,
+                      onPressed: _handleSignUp,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: primaryColor,
                         padding: const EdgeInsets.symmetric(vertical: 18),
@@ -288,21 +294,30 @@ class _LoginPageState extends State<LoginPage> {
                         elevation: 5,
                       ),
                       child: const Text(
-                        "Ingresar",
+                        "Crear Cuenta",
                         style: TextStyle(fontSize: 18, color: Colors.white),
                       ),
                     ),
 
-                    const SizedBox(height: 25),
+                    const SizedBox(height: 30),
 
-                    const Divider(color: Colors.grey),
+                    // Texto "¿Ya tienes sesión?"
+                    Center(
+                      child: Text(
+                        "¿Ya tienes sesión?",
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+                    ),
 
-                    const SizedBox(height: 25),
+                    const SizedBox(height: 10),
 
-                    // 4. Botón de "Crear una cuenta nueva" (Contorno)
+                    // Botón para volver al Login
                     OutlinedButton(
                       onPressed: () {
-                        Navigator.pushNamed(context, Routes.createSession);
+                        Navigator.pushReplacementNamed(context, Routes.login);
                       },
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
@@ -312,7 +327,7 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       ),
                       child: Text(
-                        "Crear una cuenta nueva",
+                        "Iniciar Sesión",
                         style: TextStyle(
                           color: accentColor,
                           fontWeight: FontWeight.bold,
