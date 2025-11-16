@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'home_page.dart';
+import 'pages/home_page_doctor.dart';
+import 'pages/schedule.dart';
+import 'pages/schedule_doctor.dart';
 import 'pages/messages.dart';
-
 import 'pages/settings.dart';
-import 'pages/schedule.dart'; // Importamos la SchedulePage para la vista de Citas
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -14,80 +17,249 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
+  bool? _isDoctor;
+  bool _isLoading = true;
+  String? _errorMessage;
 
-  // Widget genérico de Placeholder para las pantallas no implementadas
+  @override
+  void initState() {
+    super.initState();
+    print('✅ MainScreen: initState llamado');
+    _checkUserType();
+  }
 
-  // Lista de los títulos del AppBar
-  static const List<String> _pageTitles = <String>[
-    'Inicio',
-    'Mensajes',
-    'Citas Agendadas',
-    'Configuración',
-  ];
+  Future<void> _checkUserType() async {
+    print('🔍 MainScreen: Verificando tipo de usuario...');
 
-  // Inicialización de la lista de Widgets
-  final List<Widget> _widgetOptions = <Widget>[
-    const HomePage(),
-    const MessagesPage(),
-    const SchedulePage(), // Pestaña de Citas Agendadas
-    const SettingsPage(), // Pestaña de Configuración/Perfil
-  ];
+    final user = FirebaseAuth.instance.currentUser;
+    print('👤 Usuario actual: ${user?.uid}');
+
+    if (user == null) {
+      print('❌ No hay usuario autenticado');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = 'No hay usuario autenticado';
+        });
+      }
+      return;
+    }
+
+    try {
+      print('📥 Obteniendo documento del usuario...');
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+
+      print('📄 Documento existe: ${userDoc.exists}');
+
+      if (userDoc.exists) {
+        final data = userDoc.data();
+        print('📊 Datos del usuario: $data');
+
+        if (mounted) {
+          setState(() {
+            _isDoctor = data?['is_doctor'] ?? false;
+            _isLoading = false;
+            print('✅ Es doctor: $_isDoctor');
+          });
+        }
+      } else {
+        print('⚠️ El documento del usuario no existe');
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+            _errorMessage = 'Perfil de usuario no encontrado';
+          });
+        }
+      }
+    } catch (e, stackTrace) {
+      print('❌ Error al verificar tipo de usuario: $e');
+      print('📚 StackTrace: $stackTrace');
+
+      if (mounted) {
+        setState(() {
+          _isDoctor = false;
+          _isLoading = false;
+          _errorMessage = 'Error: $e';
+        });
+      }
+    }
+  }
 
   void _onItemTapped(int index) {
+    print('🔘 Tab seleccionado: $index');
     setState(() {
       _selectedIndex = index;
     });
   }
 
-  final Color primaryColor = const Color(0xFF007BFF);
-
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      // --- AppBar General para toda la MainScreen ---
-      appBar: AppBar(
-        title: Text(
-          _pageTitles[_selectedIndex], // Título dinámico
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
+    print(
+      '🎨 build() - isLoading: $_isLoading, isDoctor: $_isDoctor, error: $_errorMessage',
+    );
+
+    if (_isLoading) {
+      return Scaffold(
+        body: Container(
+          color: Colors.white,
+          child: const Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 20),
+                Text(
+                  'Cargando perfil...',
+                  style: TextStyle(fontSize: 16, color: Colors.grey),
+                ),
+              ],
+            ),
           ),
         ),
-        backgroundColor: primaryColor,
-        elevation: 0,
-        automaticallyImplyLeading: false, // Quitar el botón de retroceso
-      ),
-      // El body ahora solo contiene el widget seleccionado de la lista
-      body: _widgetOptions.elementAt(_selectedIndex),
+      );
+    }
 
+    // Mostrar error si hay
+    if (_errorMessage != null) {
+      return Scaffold(
+        backgroundColor: Colors.white,
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline, size: 60, color: Colors.red),
+                const SizedBox(height: 16),
+                Text(
+                  _errorMessage!,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 16),
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: () {
+                    setState(() {
+                      _isLoading = true;
+                      _errorMessage = null;
+                    });
+                    _checkUserType();
+                  },
+                  child: const Text('Reintentar'),
+                ),
+                const SizedBox(height: 12),
+                ElevatedButton(
+                  onPressed: () async {
+                    await FirebaseAuth.instance.signOut();
+                    if (context.mounted) {
+                      Navigator.of(context).pushReplacementNamed('/login');
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                  child: const Text('Cerrar Sesión'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Definir páginas según el tipo de usuario
+    List<Widget> pages;
+
+    try {
+      print('📄 Creando páginas...');
+      pages = _isDoctor == true
+          ? [
+              const HomePageDoctor(),
+              const ScheduleDoctorPage(),
+              const MessagesPage(),
+              const SettingsPage(),
+            ]
+          : [
+              const HomePage(),
+              const SchedulePage(),
+              const MessagesPage(),
+              const SettingsPage(),
+            ];
+      print('✅ Páginas creadas exitosamente');
+    } catch (e, stackTrace) {
+      print('❌ Error creando páginas: $e');
+      print('📚 StackTrace: $stackTrace');
+
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error, size: 60, color: Colors.red),
+              const SizedBox(height: 16),
+              Text('Error al cargar páginas: $e'),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () async {
+                  await FirebaseAuth.instance.signOut();
+                  if (context.mounted) {
+                    Navigator.of(context).pushReplacementNamed('/login');
+                  }
+                },
+                child: const Text('Volver al login'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    print('✅ Renderizando Scaffold con ${pages.length} páginas');
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          _selectedIndex == 0
+              ? (_isDoctor == true ? 'Dashboard' : 'Inicio')
+              : _selectedIndex == 1
+              ? 'Mis Citas'
+              : _selectedIndex == 2
+              ? 'Mensajes'
+              : 'Configuración',
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        backgroundColor: const Color(0xFF007BFF),
+        elevation: 0,
+      ),
+      body: IndexedStack(index: _selectedIndex, children: pages),
       bottomNavigationBar: BottomNavigationBar(
         items: <BottomNavigationBarItem>[
           BottomNavigationBarItem(
-            icon: const Icon(Icons.home_outlined),
-            activeIcon: const Icon(Icons.home),
-            label: _pageTitles[0],
+            icon: Icon(_isDoctor == true ? Icons.dashboard : Icons.home),
+            label: _isDoctor == true ? 'Dashboard' : 'Inicio',
           ),
-          BottomNavigationBarItem(
-            icon: const Icon(Icons.message_outlined),
-            activeIcon: const Icon(Icons.message),
-            label: _pageTitles[1],
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.calendar_today),
+            label: 'Citas',
           ),
-          BottomNavigationBarItem(
-            icon: const Icon(Icons.calendar_today_outlined),
-            activeIcon: const Icon(Icons.calendar_today),
-            label: _pageTitles[2],
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.message),
+            label: 'Mensajes',
           ),
-          BottomNavigationBarItem(
-            icon: const Icon(Icons.person_outline),
-            activeIcon: const Icon(Icons.person),
-            label: _pageTitles[3],
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.settings),
+            label: 'Configuración',
           ),
         ],
         currentIndex: _selectedIndex,
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: primaryColor,
+        selectedItemColor: const Color(0xFF007BFF),
         unselectedItemColor: Colors.grey,
         onTap: _onItemTapped,
+        type: BottomNavigationBarType.fixed,
         backgroundColor: Colors.white,
         elevation: 10,
       ),

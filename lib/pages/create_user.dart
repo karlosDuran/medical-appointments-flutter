@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import '../../routes.dart';
+import '../services/schedule_service.dart'; // Agregar al inicio
 
 class CreateUserPage extends StatefulWidget {
   const CreateUserPage({super.key});
@@ -244,6 +245,15 @@ class _CreateUserPageState extends State<CreateUserPage> {
             .collection('users')
             .doc(user.uid)
             .update(userData);
+
+        // Si es doctor, generar horarios
+        if (_isDoctor == true) {
+          try {
+            await ScheduleService().generateSchedulesForDoctor(user.uid);
+          } catch (e) {
+            print('Error generando horarios: $e');
+          }
+        }
 
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(

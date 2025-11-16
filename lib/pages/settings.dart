@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:intl/intl.dart';
 import '../routes.dart';
 import '../services/firestore_service.dart';
+import '../services/schedule_service.dart'; // Agregar al inicio
 
 const String _profileFileName = 'profile_picture.jpg';
 
@@ -21,6 +22,7 @@ class _SettingsPageState extends State<SettingsPage> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirestoreService _firestoreService = FirestoreService();
+  final ScheduleService _scheduleService = ScheduleService(); // Agregar aquí
 
   File? _profileImageFile;
   bool _isLoading = false;
@@ -478,8 +480,24 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
               TextButton(
                 child: Text('Guardar', style: TextStyle(color: primaryColor)),
-                onPressed: () {
-                  _updateFirestoreField('work_schedule', tempSchedule);
+                onPressed: () async {
+                  await _updateFirestoreField('work_schedule', tempSchedule);
+
+                  // Generar horarios disponibles
+                  final currentUser = _auth.currentUser;
+                  if (currentUser != null) {
+                    try {
+                      await _scheduleService.generateSchedulesForDoctor(
+                        currentUser.uid,
+                      );
+                      _showMessage(
+                        'Horarios actualizados y generados correctamente',
+                      );
+                    } catch (e) {
+                      _showMessage('Error generando horarios: $e');
+                    }
+                  }
+
                   Navigator.pop(context);
                 },
               ),
