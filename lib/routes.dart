@@ -7,13 +7,13 @@ import 'pages/messages.dart';
 import 'pages/schedule_appointment_page.dart';
 import 'pages/schedule.dart';
 import 'pages/edit_appointment_page.dart';
-
-// Placeholder para la clase SchedulePage si se usa directamente, aunque usaremos ScheduleView
+import 'pages/create_user.dart';
 
 class Routes {
   static const String root = '/';
   static const String login = '/login';
   static const String createSession = '/createSession';
+  static const String createUser = '/createUser';
   static const String home = '/home';
   static const String profile =
       '/profile'; // Usada internamente para la pestaña de Settings
@@ -34,6 +34,8 @@ class Routes {
         return MaterialPageRoute(builder: (_) => const LoginPage());
       case createSession:
         return MaterialPageRoute(builder: (_) => const CreateSessionPage());
+      case createUser:
+        return MaterialPageRoute(builder: (_) => const CreateUserPage());
       case profile:
         return MaterialPageRoute(builder: (_) => const SettingsPage());
       case messages:

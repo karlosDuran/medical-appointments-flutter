@@ -51,11 +51,9 @@ class _CreateSessionPageState extends State<CreateSessionPage> {
 
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Cuenta creada con éxito. ¡Ya puedes ingresar!"),
-          ),
+          const SnackBar(content: Text("Cuenta creada. Completa tu perfil.")),
         );
-        Navigator.pushReplacementNamed(context, Routes.home);
+        Navigator.pushReplacementNamed(context, Routes.createUser);
       } on FirebaseAuthException catch (e) {
         String message;
         if (e.code == 'weak-password') {

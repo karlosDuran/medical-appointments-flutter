@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:path_provider/path_provider.dart';
 import 'routes.dart';
 
@@ -24,6 +25,8 @@ class _HomePageState extends State<HomePage> {
   ); // Tono morado para contraste
 
   User? _currentUser;
+  String _userName = ""; // Nombre desde Firestore
+  bool _isLoadingName = true;
 
   final List<String> _dailyTips = [
     "Recuerda beber al menos 8 vasos de agua al día para mantenerte hidratado.",
@@ -44,6 +47,36 @@ class _HomePageState extends State<HomePage> {
       _showDailyTipPopup();
     }
     _loadLocalImage();
+    _loadUserName(); // Cargar nombre desde Firestore
+  }
+
+  // Cargar el nombre del usuario desde Firestore
+  Future<void> _loadUserName() async {
+    if (_currentUser == null) return;
+
+    try {
+      final docSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(_currentUser!.uid)
+          .get();
+
+      if (docSnapshot.exists && mounted) {
+        setState(() {
+          _userName =
+              docSnapshot.data()?['name'] ??
+              _currentUser!.email?.split('@')[0] ??
+              "Usuario";
+          _isLoadingName = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _userName = _currentUser!.email?.split('@')[0] ?? "Usuario";
+          _isLoadingName = false;
+        });
+      }
+    }
   }
 
   // Muestra el pop-up con un consejo aleatorio
@@ -157,23 +190,22 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final userName = _currentUser?.displayName ?? "karlos";
-
-    // La HomePage ahora solo devuelve el contenido central sin Scaffold ni AppBar
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           // Saludo
-          Text(
-            'Hola $userName',
-            style: const TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
+          _isLoadingName
+              ? const CircularProgressIndicator()
+              : Text(
+                  'Hola $_userName',
+                  style: const TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
           Text(
             '¿Cómo te sientes hoy?',
             style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
