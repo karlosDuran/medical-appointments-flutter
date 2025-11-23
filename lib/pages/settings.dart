@@ -527,7 +527,7 @@ class _SettingsPageState extends State<SettingsPage> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 DropdownButtonFormField<String>(
-                  value: selectedDay,
+                  initialValue: selectedDay,
                   decoration: const InputDecoration(labelText: 'Día'),
                   items: _daysOfWeek
                       .map(

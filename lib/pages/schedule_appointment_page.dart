@@ -405,7 +405,7 @@ class _ScheduleAppointmentPageState extends State<ScheduleAppointmentPage> {
                         borderRadius: BorderRadius.circular(10),
                       ),
                     ),
-                    value: _selectedDoctorId,
+                    initialValue: _selectedDoctorId,
                     hint: const Text('Selecciona un doctor'),
                     isExpanded: true,
                     items: doctors.map((doc) {

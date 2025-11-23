@@ -41,6 +41,7 @@ dependencies:
   firebase_app_check: ^0.2.2+7
   flutter_slidable: ^3.0.0
   shared_preferences: ^2.2.2
+  fl_chart: ^0.66.0
 
 
   # The following adds the Cupertino Icons font to your application.

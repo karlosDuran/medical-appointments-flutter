@@ -7,6 +7,7 @@ import 'pages/schedule.dart';
 import 'pages/schedule_doctor.dart';
 import 'pages/messages.dart';
 import 'pages/settings.dart';
+import 'pages/graphics_page.dart'; // ← AGREGAR al inicio
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -177,6 +178,7 @@ class _MainScreenState extends State<MainScreen> {
           ? [
               const HomePageDoctor(),
               const ScheduleDoctorPage(),
+              const GraphicsPage(),
               const MessagesPage(),
               const SettingsPage(),
             ]
@@ -217,16 +219,53 @@ class _MainScreenState extends State<MainScreen> {
 
     print('✅ Renderizando Scaffold con ${pages.length} páginas');
 
+    // Determinar título del AppBar según el índice y tipo de usuario
+    String appBarTitle;
+    if (_isDoctor == true) {
+      // Para doctores (5 pestañas)
+      switch (_selectedIndex) {
+        case 0:
+          appBarTitle = 'Dashboard';
+          break;
+        case 1:
+          appBarTitle = 'Mis Citas';
+          break;
+        case 2:
+          appBarTitle = 'Gráficas';
+          break;
+        case 3:
+          appBarTitle = 'Mensajes';
+          break;
+        case 4:
+          appBarTitle = 'Configuración';
+          break;
+        default:
+          appBarTitle = 'Dashboard';
+      }
+    } else {
+      // Para pacientes (4 pestañas)
+      switch (_selectedIndex) {
+        case 0:
+          appBarTitle = 'Inicio';
+          break;
+        case 1:
+          appBarTitle = 'Mis Citas';
+          break;
+        case 2:
+          appBarTitle = 'Mensajes';
+          break;
+        case 3:
+          appBarTitle = 'Configuración';
+          break;
+        default:
+          appBarTitle = 'Inicio';
+      }
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          _selectedIndex == 0
-              ? (_isDoctor == true ? 'Dashboard' : 'Inicio')
-              : _selectedIndex == 1
-              ? 'Mis Citas'
-              : _selectedIndex == 2
-              ? 'Mensajes'
-              : 'Configuración',
+          appBarTitle,
           style: const TextStyle(
             fontWeight: FontWeight.bold,
             color: Colors.white,
@@ -246,6 +285,11 @@ class _MainScreenState extends State<MainScreen> {
             icon: Icon(Icons.calendar_today),
             label: 'Citas',
           ),
+          if (_isDoctor == true)
+            const BottomNavigationBarItem(
+              icon: Icon(Icons.bar_chart),
+              label: 'Gráficas',
+            ),
           const BottomNavigationBarItem(
             icon: Icon(Icons.message),
             label: 'Mensajes',

@@ -47,7 +47,7 @@ class _CreateUserPageState extends State<CreateUserPage> {
   ];
 
   // Horarios del doctor (día -> lista de intervalos)
-  Map<String, List<Map<String, TimeOfDay>>> _workSchedule = {};
+  final Map<String, List<Map<String, TimeOfDay>>> _workSchedule = {};
 
   final List<String> _daysOfWeek = [
     'Lunes',
@@ -117,7 +117,7 @@ class _CreateUserPageState extends State<CreateUserPage> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 DropdownButtonFormField<String>(
-                  value: selectedDay,
+                  initialValue: selectedDay,
                   decoration: const InputDecoration(labelText: 'Día'),
                   items: _daysOfWeek
                       .where((day) => !_workSchedule.containsKey(day))
@@ -392,7 +392,7 @@ class _CreateUserPageState extends State<CreateUserPage> {
                 if (_isDoctor == true) ...[
                   // Especialidad
                   DropdownButtonFormField<String>(
-                    value: _selectedSpecialty,
+                    initialValue: _selectedSpecialty,
                     decoration: InputDecoration(
                       labelText: 'Especialidad',
                       prefixIcon: Icon(
